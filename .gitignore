@@ -1,3 +1,7 @@
-RenAIssance_Transformer_OCR_Utsav_Rai/weights
-RenAIssance_Transformer_OCR_Utsav_Rai/models
-RenAIssance_Transformer_OCR_Utsav_Rai/quantized_model
+#System files
+.DS_Store
+
+# Python files
+__pycache__/
+*.py[cod]
+*venv/
