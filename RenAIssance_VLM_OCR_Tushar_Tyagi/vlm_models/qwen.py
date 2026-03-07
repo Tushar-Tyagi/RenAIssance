@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,10 @@ class QwenVLM(BaseVLM):
         """
         logger.info("Loading Qwen model '%s' with 4-bit quantisation …", model_id)
 
+        # Create local cache directory
+        os.makedirs("models", exist_ok=True)
+        local_path = f"models/{model_id.replace('/', '_').replace('-', '_')}"
+
         quant_config: BitsAndBytesConfig = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_compute_dtype=torch.float16,
@@ -37,16 +42,32 @@ class QwenVLM(BaseVLM):
             bnb_4bit_use_double_quant=True,
         )
 
-        self.processor: AutoProcessor = AutoProcessor.from_pretrained(model_id)
-
-        self.model: Qwen2VLForConditionalGeneration = (
-            Qwen2VLForConditionalGeneration.from_pretrained(
-                model_id,
-                quantization_config=quant_config,
-                device_map="auto",
-                torch_dtype=torch.float16,
+        if os.path.exists(local_path):
+            logger.info("Loading from local cache: %s", local_path)
+            self.processor: AutoProcessor = AutoProcessor.from_pretrained(local_path)
+            self.model: Qwen2VLForConditionalGeneration = (
+                Qwen2VLForConditionalGeneration.from_pretrained(
+                    local_path,
+                    quantization_config=quant_config,
+                    device_map="auto",
+                    torch_dtype=torch.float16,
+                )
             )
-        )
+        else:
+            logger.info("Downloading and caching model: %s", model_id)
+            self.processor: AutoProcessor = AutoProcessor.from_pretrained(model_id)
+            self.model: Qwen2VLForConditionalGeneration = (
+                Qwen2VLForConditionalGeneration.from_pretrained(
+                    model_id,
+                    quantization_config=quant_config,
+                    device_map="auto",
+                    torch_dtype=torch.float16,
+                )
+            )
+            # Save to local cache
+            self.model.save_pretrained(local_path)
+            self.processor.save_pretrained(local_path)
+            logger.info("Saved model to local cache: %s", local_path)
 
         logger.info("Qwen VLM loaded successfully.")
 

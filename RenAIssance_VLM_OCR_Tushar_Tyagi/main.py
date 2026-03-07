@@ -4,7 +4,7 @@ HTR Zero-Shot Evaluation — Main Orchestrator
 
 Usage::
 
-    python main.py                        # defaults
+    python main.py                        # defaults, saves to outputs/
     python main.py --data-dir ./data      # custom data root
     python main.py --model-id Qwen/Qwen2-VL-2B-Instruct  # different model
 """
@@ -12,6 +12,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import datetime
 import logging
 from pathlib import Path
 
@@ -61,7 +62,7 @@ def parse_args() -> argparse.Namespace:
         "--output-file",
         type=Path,
         default=None,
-        help="Optional path to save the evaluation metrics as a JSON file.",
+        help="Path to save the evaluation metrics as a JSON file. If not provided, saves to outputs/ with auto-generated name.",
     )
     parser.add_argument(
         "--prompt-file",
@@ -89,6 +90,15 @@ def main() -> None:
     5. Compute and print CER & WER.
     """
     args: argparse.Namespace = parse_args()
+
+    # Generate default output file if not provided
+    if args.output_file is None:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        model_short = args.model_id.replace("/", "_").replace("-", "_")
+        args.output_file = Path(f"outputs/eval_{model_short}_{timestamp}.json")
+
+    # Ensure output directory exists
+    args.output_file.parent.mkdir(parents=True, exist_ok=True)
 
     # 1. Data ingestion -------------------------------------------------
     logger.info("Loading test data from '%s' …", args.data_dir)
@@ -134,15 +144,14 @@ def main() -> None:
     metrics: dict[str, float] = compute_metrics(predictions_norm, references_norm)
     print_results(metrics)
 
-    if args.output_file is not None:
-        save_results(
-            metrics, 
-            args.output_file, 
-            model_id=args.model_id, 
-            prompt=prompt,
-            data_dir=args.data_dir
-        )
-        logger.info("Saved evaluation metrics to '%s'.", args.output_file)
+    save_results(
+        metrics, 
+        args.output_file, 
+        model_id=args.model_id, 
+        prompt=prompt,
+        data_dir=args.data_dir
+    )
+    logger.info("Saved evaluation metrics to '%s'.", args.output_file)
 
 
 if __name__ == "__main__":

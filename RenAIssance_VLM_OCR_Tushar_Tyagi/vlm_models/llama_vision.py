@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 import torch
@@ -14,10 +15,28 @@ class LlamaVisionVLM(BaseVLM):
     
     def __init__(self, model_id: str):
         logger.info("Loading Llama Vision model '%s'...", model_id)
-        self.processor = AutoProcessor.from_pretrained(model_id)
-        self.model = MllamaForConditionalGeneration.from_pretrained(
-            model_id, device_map="auto", torch_dtype=torch.float16, load_in_4bit=True
-        )
+        
+        # Create local cache directory
+        os.makedirs("models", exist_ok=True)
+        local_path = f"models/{model_id.replace('/', '_').replace('-', '_')}"
+        
+        if os.path.exists(local_path):
+            logger.info("Loading from local cache: %s", local_path)
+            self.processor = AutoProcessor.from_pretrained(local_path)
+            self.model = MllamaForConditionalGeneration.from_pretrained(
+                local_path, device_map="auto", torch_dtype=torch.float16, load_in_4bit=True
+            )
+        else:
+            logger.info("Downloading and caching model: %s", model_id)
+            self.processor = AutoProcessor.from_pretrained(model_id)
+            self.model = MllamaForConditionalGeneration.from_pretrained(
+                model_id, device_map="auto", torch_dtype=torch.float16, load_in_4bit=True
+            )
+            # Save to local cache
+            self.model.save_pretrained(local_path)
+            self.processor.save_pretrained(local_path)
+            logger.info("Saved model to local cache: %s", local_path)
+        
         self.model.eval()
         
     def transcribe(self, image_path: Path, prompt: str) -> str:

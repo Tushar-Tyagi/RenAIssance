@@ -28,14 +28,37 @@ You can run the full evaluation pipeline using the `main.py` entrypoint:
 python main.py
 ```
 
+To test all available models on both `data` and `data_alltest` folders, use the provided script:
+
+```bash
+./test_all.sh
+```
+
+This will run evaluations for all supported models and save results automatically to the `outputs/` folder. All console output is also logged to `outputs/test_all_log.txt` for analysis.
+
 ### CLI Arguments
 
 The orchestrator supports several configuration overrides:
 
 - `--data-dir <path>`: Root directory containing `test/images/` and `test/transcription/`. (default: `data`)
 - `--model-id <name>`: The HuggingFace model space identifier (default: `Qwen/Qwen2-VL-7B-Instruct`).
-- `--output-file <path>`: Optional path to save the final evaluation metrics as a JSON file.
+- `--output-file <path>`: Path to save the evaluation metrics as a JSON file. If not provided, saves to `outputs/` with an auto-generated name based on model and timestamp.
 - `--prompt-file <path>`: Optional parameter to override the default prompt with a plain text file.
+
+### Supported Models
+
+The following Vision-Language Models are supported. Specify the model using the `--model-id` argument with the corresponding HuggingFace model identifier:
+
+- **Qwen2-VL**: `Qwen/Qwen2-VL-7B-Instruct` (default)
+- **GOT-OCR**: `stepfun-ai/GOT-OCR2_0`
+- **Florence-2**: `microsoft/Florence-2-base`
+- **InternVL**: `OpenGVLab/InternVL2-8B`
+- **MiniCPM-V**: `openbmb/MiniCPM-V-2_6`
+- **Llama Vision**: `meta-llama/Llama-3.2-11B-Vision-Instruct`
+- **Phi-3.5 Vision**: `microsoft/Phi-3.5-vision-instruct`
+- **olmOCR**: `M4-ai/olmOCR-7B-0225-preview`
+
+Note: Models are automatically cached locally in the `models/` directory after the first download to avoid re-downloads on subsequent runs.
 
 ## Normalization Pipeline
 
