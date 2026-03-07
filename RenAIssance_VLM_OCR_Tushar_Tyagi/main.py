@@ -135,7 +135,13 @@ def main() -> None:
     print_results(metrics)
 
     if args.output_file is not None:
-        save_results(metrics, args.output_file)
+        save_results(
+            metrics, 
+            args.output_file, 
+            model_id=args.model_id, 
+            prompt=prompt,
+            data_dir=args.data_dir
+        )
         logger.info("Saved evaluation metrics to '%s'.", args.output_file)
 
 

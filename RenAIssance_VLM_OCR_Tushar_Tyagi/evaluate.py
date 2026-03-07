@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from jiwer import cer, wer
 
@@ -63,16 +64,34 @@ def print_results(metrics: dict[str, float]) -> None:
     print("=" * 50 + "\n")
 
 
-def save_results(metrics: dict[str, float], output_path: str | Path) -> None:
+def save_results(
+    metrics: dict[str, float], 
+    output_path: str | Path,
+    model_id: str | None = None,
+    prompt: str | None = None,
+    data_dir: str | Path | None = None
+) -> None:
     """Save evaluation metrics to a JSON file.
 
     Args:
         metrics: Dictionary returned by :func:`compute_metrics`.
         output_path: Path to the output JSON file.
+        model_id: Optional identifier of the model used.
+        prompt: Optional prompt text used.
+        data_dir: Optional identifier of the root data directory.
     """
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
+    data: dict[str, Any] = {**metrics}
+    if model_id is not None:
+        data["model_id"] = model_id
+    if prompt is not None:
+        data["prompt"] = prompt
+
+    if data_dir is not None:
+        data["data_dir"] = str(data_dir)
+
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(metrics, f, indent=4)
+        json.dump(data, f, indent=4)
         f.write("\n")

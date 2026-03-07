@@ -12,7 +12,6 @@ import logging
 from pathlib import Path
 
 from vlm_models.base import BaseVLM
-from vlm_models.qwen import QwenVLM
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -40,7 +39,29 @@ def load_model(model_id: str = DEFAULT_MODEL_ID) -> BaseVLM:
 
     # Simple dispatcher based on model_id heuristics
     if "qwen" in model_id_lower:
+        from vlm_models.qwen import QwenVLM
         return QwenVLM(model_id)
+    elif "olmocr" in model_id_lower:
+        from vlm_models.olmocr import OlmOCRVLM
+        return OlmOCRVLM(model_id)
+    elif "got-ocr" in model_id_lower:
+        from vlm_models.got_ocr import GotOCRVLM
+        return GotOCRVLM(model_id)
+    elif "florence" in model_id_lower:
+        from vlm_models.florence import FlorenceVLM
+        return FlorenceVLM(model_id)
+    elif "internvl" in model_id_lower:
+        from vlm_models.internvl import InternVLVLM
+        return InternVLVLM(model_id)
+    elif "minicpm" in model_id_lower:
+        from vlm_models.minicpm import MiniCPMVLM
+        return MiniCPMVLM(model_id)
+    elif "llama" in model_id_lower:
+        from vlm_models.llama_vision import LlamaVisionVLM
+        return LlamaVisionVLM(model_id)
+    elif "phi" in model_id_lower:
+        from vlm_models.phi_vision import PhiVisionVLM
+        return PhiVisionVLM(model_id)
 
     raise ValueError(f"No corresponding wrapper implementation for model: {model_id}")
 
