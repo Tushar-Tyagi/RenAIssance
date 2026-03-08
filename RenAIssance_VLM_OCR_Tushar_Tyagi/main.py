@@ -90,6 +90,8 @@ def main() -> None:
     5. Compute and print CER & WER.
     """
     args: argparse.Namespace = parse_args()
+    # Robustness: strip trailing commas that might come from typos in shell scripts
+    args.model_id = args.model_id.strip(",")
 
     # Generate default output file if not provided
     if args.output_file is None:
