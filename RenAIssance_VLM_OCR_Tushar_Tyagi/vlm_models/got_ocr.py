@@ -5,6 +5,15 @@ from pathlib import Path
 import torch
 from PIL import Image
 from transformers import AutoModel, AutoTokenizer
+from transformers.cache_utils import DynamicCache
+
+if not hasattr(DynamicCache, "seen_tokens"):
+    # Monkey patch for older custom models that expect this property
+    @property
+    def seen_tokens(self) -> int:
+        return self._seen_tokens
+    
+    DynamicCache.seen_tokens = seen_tokens
 
 from .base import BaseVLM
 
@@ -45,7 +54,7 @@ class GotOCRVLM(BaseVLM):
             return str(res)
         except Exception as e:
             logger.warning("Standard GOT-OCR 'ocr' mode failed, falling back: %s", e)
-            res = self.model.chat(self.tokenizer, str(image_path), prompt=prompt)
+            res = self.model.chat(self.tokenizer, str(image_path), ocr_type='ocr')
             if isinstance(res, tuple):
                 return str(res[0])
             return str(res)
