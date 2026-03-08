@@ -20,9 +20,9 @@ Ensure you have a GPU-enabled environment. Install the pinned dependencies provi
 pip install -r requirements.txt
 ```
 
-### Setup / Authentication
-**NOTE:** Llama 3.2 Vision and MiniCPM-V 2.6 are explicitly gated on Hugging Face.
-Please make sure you have run `huggingface-cli login` in your terminal and have been granted access to these models by their authors on the Hugging Face website.
+### Setup
+
+Due to its size and underlying requirements, you will need a GPU-enabled environment.
 
 ## Usage
 
@@ -51,16 +51,14 @@ The orchestrator supports several configuration overrides:
 
 ### Supported Models
 
-The following Vision-Language Models are supported. Specify the model using the `--model-id` argument with the corresponding HuggingFace model identifier:
+It natively supports passing any Qwen2-VL, Qwen2.5-VL, or Qwen3-VL series string. Standard examples include:
 
-- **Qwen2-VL**: `Qwen/Qwen2-VL-7B-Instruct` (default)
-- **GOT-OCR**: `stepfun-ai/GOT-OCR2_0`
-- **Florence-2**: `microsoft/Florence-2-base`
-- **InternVL**: `OpenGVLab/InternVL2-8B`
-- **MiniCPM-V**: `openbmb/MiniCPM-V-2_6`
-- **Llama Vision**: `meta-llama/Llama-3.2-11B-Vision-Instruct`
-- **Phi-3.5 Vision**: `microsoft/Phi-3.5-vision-instruct`
-- **olmOCR**: `allenai/olmOCR-7B-0225-preview`
+- **Qwen2-VL (Small/Fast)**: `Qwen/Qwen2-VL-2B-Instruct`
+- **Qwen2-VL (Base)**: `Qwen/Qwen2-VL-7B-Instruct` (default)
+- **Qwen2-VL (Large)**: `Qwen/Qwen2-VL-32B-Instruct`
+- **Qwen2.5-VL (Base)**: `Qwen/Qwen2.5-VL-7B-Instruct`
+- **Qwen2.5-VL (Small/Fast)**: `Qwen/Qwen2.5-VL-3B-Instruct`
+- **Qwen3-VL (Base)**: `Qwen/Qwen3-VL-7B-Instruct`
 
 Note: Models are automatically cached locally in the `models/` directory after the first download to avoid re-downloads on subsequent runs.
 
