@@ -11,7 +11,11 @@ if not hasattr(DynamicCache, "seen_tokens"):
     # Monkey patch for older custom models that expect this property
     @property
     def seen_tokens(self) -> int:
-        return self._seen_tokens
+        if hasattr(self, "_seen_tokens"):
+            return self._seen_tokens
+        elif hasattr(self, "get_seq_length"):
+            return self.get_seq_length()
+        return 0
     
     DynamicCache.seen_tokens = seen_tokens
 
