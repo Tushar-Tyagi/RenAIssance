@@ -19,6 +19,13 @@ if not hasattr(DynamicCache, "seen_tokens"):
     
     DynamicCache.seen_tokens = seen_tokens
 
+if not hasattr(DynamicCache, "get_max_length"):
+    def get_max_length(self) -> int:
+        if hasattr(self, "get_seq_length"):
+            return self.get_seq_length()
+        return 0
+    DynamicCache.get_max_length = get_max_length
+
 from .base import BaseVLM
 
 logger = logging.getLogger(__name__)
