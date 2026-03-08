@@ -10,16 +10,23 @@ from typing import Any
 import torch
 from qwen_vl_utils import process_vision_info
 from transformers import (
+    AutoConfig,
     AutoProcessor,
     BitsAndBytesConfig,
     Qwen2VLForConditionalGeneration,
 )
 
+# Optional dynamic imports for 2.5 and 3.0+ architectures
 try:
     from transformers import Qwen2_5_VLForConditionalGeneration
-    HAS_QWEN_2_5 = True
 except ImportError:
-    HAS_QWEN_2_5 = False
+    Qwen2_5_VLForConditionalGeneration = None
+
+try:
+    from transformers import Qwen3VLForConditionalGeneration, Qwen3VLMoeForConditionalGeneration
+except ImportError:
+    Qwen3VLForConditionalGeneration = None
+    Qwen3VLMoeForConditionalGeneration = None
 
 from .base import BaseVLM
 
@@ -27,7 +34,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 class QwenVLM(BaseVLM):
-    """Wrapper for Qwen2-VL specific models with 4-bit quantisation."""
+    """Wrapper for Qwen-VL family models (2.0, 2.5, 3.0+) with 4-bit quantisation."""
 
     def __init__(self, model_id: str) -> None:
         """Initialize the Qwen VLM.
@@ -36,6 +43,10 @@ class QwenVLM(BaseVLM):
             model_id: Hugging Face model identifier or local path.
         """
         logger.info("Loading Qwen model '%s' with 4-bit quantisation …", model_id)
+
+        config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+        model_type = getattr(config, "model_type", "qwen2_vl")
+        logger.info("Detected model architecture type: %s", model_type)
 
         quant_config: BitsAndBytesConfig = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -46,11 +57,21 @@ class QwenVLM(BaseVLM):
 
         self.processor: AutoProcessor = AutoProcessor.from_pretrained(model_id)
         
-        # Select the correct architecture class
-        if HAS_QWEN_2_5 and "2.5" in model_id:
+        # Dispatch to the correct class based on architecture
+        if model_type == "qwen3_vl_moe" and Qwen3VLMoeForConditionalGeneration:
+            ModelClass = Qwen3VLMoeForConditionalGeneration
+        elif model_type == "qwen3_vl" and Qwen3VLForConditionalGeneration:
+            ModelClass = Qwen3VLForConditionalGeneration
+        elif model_type == "qwen2_5_vl" and Qwen2_5_VLForConditionalGeneration:
             ModelClass = Qwen2_5_VLForConditionalGeneration
         else:
+            # Fallback to Qwen2-VL for anything else
             ModelClass = Qwen2VLForConditionalGeneration
+            if model_type not in ["qwen2_vl", "got_qwen_vl"]:
+                logger.warning(
+                    "Model type '%s' not explicitly handled. Falling back to Qwen2VLForConditionalGeneration.",
+                    model_type
+                )
             
         self.model = ModelClass.from_pretrained(
             model_id,
@@ -59,7 +80,8 @@ class QwenVLM(BaseVLM):
             torch_dtype=torch.float16,
         )
 
-        logger.info("Qwen VLM loaded successfully.")
+        logger.info("Successfully loaded %s with %s architecture.", model_id, ModelClass.__name__)
+
     def transcribe(self, image_path: Path, prompt: str) -> str:
         """Run transcription on a single image.
 
