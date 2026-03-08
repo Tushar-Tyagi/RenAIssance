@@ -13,6 +13,10 @@ mkdir -p outputs
 echo "Starting comprehensive model evaluation at $(date)"
 echo "=================================================="
 
+echo "NOTE: Llama 3.2 Vision and MiniCPM-V 2.6 are explicitly gated on Hugging Face."
+echo "Please make sure you have run 'huggingface-cli login' and have been granted access to these models."
+echo "=================================================="
+
 # Array of model IDs
 models=(
     # "Qwen/Qwen2-VL-7B-Instruct"
@@ -22,7 +26,7 @@ models=(
     "openbmb/MiniCPM-V-2_6"
     "meta-llama/Llama-3.2-11B-Vision-Instruct"
     "microsoft/Phi-3.5-vision-instruct"
-    "M4-ai/olmOCR-7B-0225-preview"
+    "allenai/olmOCR-7B-0225-preview"
 )
 
 # Array of data directories

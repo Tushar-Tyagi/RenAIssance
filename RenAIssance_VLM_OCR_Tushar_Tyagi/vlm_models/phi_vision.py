@@ -24,13 +24,13 @@ class PhiVisionVLM(BaseVLM):
             logger.info("Loading from local cache: %s", local_path)
             self.processor = AutoProcessor.from_pretrained(local_path, trust_remote_code=True)
             self.model = AutoModelForCausalLM.from_pretrained(
-                local_path, trust_remote_code=True, device_map="auto", torch_dtype=torch.float16, _attn_implementation="flash_attention_2"
+                local_path, trust_remote_code=True, device_map="auto", torch_dtype=torch.float16
             )
         else:
             logger.info("Downloading and caching model: %s", model_id)
             self.processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_id, trust_remote_code=True, device_map="auto", torch_dtype=torch.float16, _attn_implementation="flash_attention_2"
+                model_id, trust_remote_code=True, device_map="auto", torch_dtype=torch.float16
             )
             # Save to local cache
             self.model.save_pretrained(local_path)

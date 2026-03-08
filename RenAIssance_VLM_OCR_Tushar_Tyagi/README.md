@@ -20,6 +20,10 @@ Ensure you have a GPU-enabled environment. Install the pinned dependencies provi
 pip install -r requirements.txt
 ```
 
+### Setup / Authentication
+**NOTE:** Llama 3.2 Vision and MiniCPM-V 2.6 are explicitly gated on Hugging Face.
+Please make sure you have run `huggingface-cli login` in your terminal and have been granted access to these models by their authors on the Hugging Face website.
+
 ## Usage
 
 You can run the full evaluation pipeline using the `main.py` entrypoint:
@@ -56,7 +60,7 @@ The following Vision-Language Models are supported. Specify the model using the 
 - **MiniCPM-V**: `openbmb/MiniCPM-V-2_6`
 - **Llama Vision**: `meta-llama/Llama-3.2-11B-Vision-Instruct`
 - **Phi-3.5 Vision**: `microsoft/Phi-3.5-vision-instruct`
-- **olmOCR**: `M4-ai/olmOCR-7B-0225-preview`
+- **olmOCR**: `allenai/olmOCR-7B-0225-preview`
 
 Note: Models are automatically cached locally in the `models/` directory after the first download to avoid re-downloads on subsequent runs.
 

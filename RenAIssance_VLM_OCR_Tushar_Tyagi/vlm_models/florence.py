@@ -20,6 +20,13 @@ class FlorenceVLM(BaseVLM):
         os.makedirs("models", exist_ok=True)
         local_path = f"models/{model_id.replace('/', '_').replace('-', '_')}"
         
+        # Apply patch for older Florence-2 remote code with newer transformers
+        import transformers.tokenization_utils_base
+        if not hasattr(transformers.tokenization_utils_base.TokenizersBackend, "additional_special_tokens"):
+            transformers.tokenization_utils_base.TokenizersBackend.additional_special_tokens = property(
+                lambda self: [str(token) for token in self.special_tokens_set]
+            )
+            
         if os.path.exists(local_path):
             logger.info("Loading from local cache: %s", local_path)
             self.processor = AutoProcessor.from_pretrained(local_path, trust_remote_code=True)
