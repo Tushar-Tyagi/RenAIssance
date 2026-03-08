@@ -15,6 +15,12 @@ from transformers import (
     Qwen2VLForConditionalGeneration,
 )
 
+try:
+    from transformers import Qwen2_5_VLForConditionalGeneration
+    HAS_QWEN_2_5 = True
+except ImportError:
+    HAS_QWEN_2_5 = False
+
 from .base import BaseVLM
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -31,10 +37,6 @@ class QwenVLM(BaseVLM):
         """
         logger.info("Loading Qwen model '%s' with 4-bit quantisation …", model_id)
 
-        # Create local cache directory
-        os.makedirs("models", exist_ok=True)
-        local_path = f"models/{model_id.replace('/', '_').replace('-', '_')}"
-
         quant_config: BitsAndBytesConfig = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_compute_dtype=torch.float16,
@@ -42,35 +44,22 @@ class QwenVLM(BaseVLM):
             bnb_4bit_use_double_quant=True,
         )
 
-        if os.path.exists(local_path):
-            logger.info("Loading from local cache: %s", local_path)
-            self.processor: AutoProcessor = AutoProcessor.from_pretrained(local_path)
-            self.model: Qwen2VLForConditionalGeneration = (
-                Qwen2VLForConditionalGeneration.from_pretrained(
-                    local_path,
-                    quantization_config=quant_config,
-                    device_map="auto",
-                    torch_dtype=torch.float16,
-                )
-            )
+        self.processor: AutoProcessor = AutoProcessor.from_pretrained(model_id)
+        
+        # Select the correct architecture class
+        if HAS_QWEN_2_5 and "2.5" in model_id:
+            ModelClass = Qwen2_5_VLForConditionalGeneration
         else:
-            logger.info("Downloading and caching model: %s", model_id)
-            self.processor: AutoProcessor = AutoProcessor.from_pretrained(model_id)
-            self.model: Qwen2VLForConditionalGeneration = (
-                Qwen2VLForConditionalGeneration.from_pretrained(
-                    model_id,
-                    quantization_config=quant_config,
-                    device_map="auto",
-                    torch_dtype=torch.float16,
-                )
-            )
-            # Save to local cache
-            self.model.save_pretrained(local_path)
-            self.processor.save_pretrained(local_path)
-            logger.info("Saved model to local cache: %s", local_path)
+            ModelClass = Qwen2VLForConditionalGeneration
+            
+        self.model = ModelClass.from_pretrained(
+            model_id,
+            quantization_config=quant_config,
+            device_map="auto",
+            torch_dtype=torch.float16,
+        )
 
         logger.info("Qwen VLM loaded successfully.")
-
     def transcribe(self, image_path: Path, prompt: str) -> str:
         """Run transcription on a single image.
 

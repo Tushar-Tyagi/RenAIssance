@@ -39,8 +39,8 @@ def load_model(model_id: str = DEFAULT_MODEL_ID) -> BaseVLM:
 
     # Simple dispatcher based on model_id heuristics
     if "qwen" in model_id_lower:
-    from vlm_models.qwen import QwenVLM
-    return QwenVLM(model_id)
+        from vlm_models.qwen import QwenVLM
+        return QwenVLM(model_id)
 
 
 def transcribe_image(
