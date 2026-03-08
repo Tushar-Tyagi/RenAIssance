@@ -2,7 +2,7 @@
 
 # Ensure outputs directory exists
 mkdir -p outputs
-LOGFILE="outputs/test_qwen_log.txt"
+LOGFILE="outputs/eval_log.txt"
 
 echo "Starting Qwen model evaluation at $(date)" > "$LOGFILE"
 echo "==================================================" >> "$LOGFILE"
@@ -11,11 +11,17 @@ echo "==================================================" >> "$LOGFILE"
 MODELS=(
     "Qwen/Qwen2-VL-2B-Instruct"
     "Qwen/Qwen2.5-VL-3B-Instruct"
-    # "Qwen/Qwen2-VL-7B-Instruct"
+    "Qwen/Qwen2-VL-7B-Instruct"
     "Qwen/Qwen2.5-VL-7B-Instruct"
-    "Qwen/Qwen2-VL-32B-Instruct"
+    "Qwen/Qwen2.5-VL-32B-Instruct"
+    "Qwen/Qwen3-VL-30B-A3B-Instruct"
+    "Qwen/Qwen3-VL-8B-Instruct"
+    "Qwen/Qwen3-VL-2B-Instruct"
 )
-DATASETS=("data" "data_alltest")
+DATASETS=(
+    "data" 
+"data_alltest"
+)
 
 for model in "${MODELS[@]}"; do
     for data_dir in "${DATASETS[@]}"; do

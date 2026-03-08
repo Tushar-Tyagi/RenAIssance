@@ -1,0 +1,7 @@
+{
+    "cer": 0.124492164828787,
+    "wer": 0.3556254917387884,
+    "model_id": "Qwen/Qwen3-VL-30B-A3B-Instruct",
+    "prompt": "Transcribe the handwritten text in this image exactly as written. Do not correct spelling, punctuation, or grammar. Preserve all original characters.",
+    "data_dir": "data_alltest"
+}
