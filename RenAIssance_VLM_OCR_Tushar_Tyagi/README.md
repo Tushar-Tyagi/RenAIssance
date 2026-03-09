@@ -80,11 +80,60 @@ python prepare_xml_dataset.py \
 You can optionally declare `--image_dir_prefix path/to/images/` to prepend a root path directly inside the JSON files if your image paths will change, or `--save_txt` to generate identical raw text transcriptions adjacent to each XML file.
 
 ### 2. Fine-tuning
-Once you have your `train_annotations.jsonl` matching your `images/` directory, you can configure your parameters inside `finetune.py` and run the script:
+Once you have your `train_annotations.jsonl` matching your `images/` directory, you can run the fine-tuning script with flexible command-line arguments:
 
 ```bash
+# Default configuration (uses all prompts from prompts/ directory)
 python finetune.py
+
+# Custom model and data paths
+python finetune.py \
+    --model "Qwen/Qwen2.5-VL-7B-Instruct" \
+    --annotation_file "data/train_annotations.jsonl" \
+    --base_image_dir "data/"
+
+# Custom training hyperparameters
+python finetune.py \
+    --epochs 5 \
+    --batch_size 4 \
+    --learning_rate 1e-4 \
+    --lora_r 32
+
+# Full custom configuration with custom prompts directory
+python finetune.py \
+    --model "meta-llama/Llama-3.2-11B-Vision-Instruct" \
+    --annotation_file "data/train_annotations.jsonl" \
+    --output_dir "./my_checkpoints" \
+    --prompts_dir "./my_prompts" \
+    --epochs 10 \
+    --batch_size 2
 ```
+
+#### Available Arguments
+
+- `--model <model_id>`: Hugging Face model identifier (default: `Qwen/Qwen2-VL-7B-Instruct`)
+- `--annotation_file <path>`: Path to JSONL annotation file (default: `data/train_annotations.jsonl`)
+- `--base_image_dir <path>`: Base directory for image files (default: `data/`)
+- `--output_dir <path>`: Directory to save LoRA adapter weights (default: `./checkpoints/ocr_vlm_lora`)
+- `--epochs <int>`: Number of training epochs (default: `3`)
+- `--batch_size <int>`: Per-device training batch size (default: `2`)
+- `--grad_accum_steps <int>`: Gradient accumulation steps (default: `8`)
+- `--learning_rate <float>`: Learning rate (default: `2e-4`)
+- `--lora_r <int>`: LoRA rank parameter (default: `16`)
+- `--lora_alpha <int>`: LoRA alpha scaling parameter (default: `32`)
+- `--lora_dropout <float>`: LoRA dropout probability (default: `0.05`)
+- `--prompts_dir <path>`: Directory containing `.txt` prompt files for diverse training (default: `prompts`)
+
+#### Prompt Diversity for Generalization
+
+The fine-tuning pipeline automatically loads all `.txt` files from the `prompts/` directory and randomly samples from them during training. This helps the model generalize better by learning to respond to various phrasings of the transcription task. 
+
+Currently available prompts:
+- `default.txt`: "Transcribe the handwritten text in this image exactly as written. Do not correct spelling, punctuation, or grammar. Preserve all original characters."
+- `alternative_1.txt`: "Please transcribe the text from the provided image of a historical document. Write the text exactly as it appears in the image. Keep any historical spellings, punctuation marks, or symbols. If a word is crossed out but readable, transcribe it. Do not attempt to modernise the language or fix perceived errors."
+
+You can add more `.txt` files to the `prompts/` directory to further improve model robustness and generalization.
+
 This efficiently targets the `q_proj`, `v_proj`, `k_proj`, and `o_proj` attention matrices with 4-bit LoRA adapters while applying optimized mixed-precision `bfloat16` and Paged AdamW optimizers to maximize fine-tuning stability on standard consumer GPU hardware.
 
 ## Normalization Pipeline
