@@ -11,6 +11,8 @@ The project is broken into several specialized modules:
 - `normalize.py`: A paleographic text normalization pipeline that applies specific historical rules to standardize both the model predictions and ground-truth text before comparison. Relies on `pyspellchecker` with a comprehensive Spanish dictionary.
 - `infer.py` & `vlm_models/`: Utilities to load the selected Vision-Language Model efficiently using 4-bit NF4 quantization, and dispatches the zero-shot transcription prompt.
 - `evaluate.py`: Calculates Character Error Rate (CER) and Word Error Rate (WER) using `jiwer`.
+- `finetune.py`: Script to fine-tune Vision-Language Models on the provided datasets.
+- `prepare_xml_dataset.py`: A utility script to parse PAGE XML formatted datasets, extracting the transcriptions into JSONL format compatible with `finetune.py`.
 
 ## Installation
 
@@ -61,6 +63,29 @@ It natively supports passing any Qwen2-VL, Qwen2.5-VL, or Qwen3-VL series string
 - **Qwen3-VL (Base)**: `Qwen/Qwen3-VL-7B-Instruct`
 
 Note: Models are automatically cached locally in the `models/` directory after the first download to avoid re-downloads on subsequent runs.
+
+## Training & Dataset Preparation
+
+We now provide an end-to-end framework to fine-tune modern VLMs based on custom datasets! 
+
+### 1. Extracting Transcriptions
+If your transcription dataset uses the **PAGE XML format** (commonly utilized for historical archival OCR), you can automatically parse your `.xml` files into the optimal `.jsonl` structure used by the SFTTrainer using the newly provided `prepare_xml_dataset.py` script:
+
+```bash
+python prepare_xml_dataset.py \
+    --xml_dir path/to/your/xml/folder \
+    --output_jsonl data/train_annotations.jsonl
+```
+
+You can optionally declare `--image_dir_prefix path/to/images/` to prepend a root path directly inside the JSON files if your image paths will change, or `--save_txt` to generate identical raw text transcriptions adjacent to each XML file.
+
+### 2. Fine-tuning
+Once you have your `train_annotations.jsonl` matching your `images/` directory, you can configure your parameters inside `finetune.py` and run the script:
+
+```bash
+python finetune.py
+```
+This efficiently targets the `q_proj`, `v_proj`, `k_proj`, and `o_proj` attention matrices with 4-bit LoRA adapters while applying optimized mixed-precision `bfloat16` and Paged AdamW optimizers to maximize fine-tuning stability on standard consumer GPU hardware.
 
 ## Normalization Pipeline
 
