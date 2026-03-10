@@ -69,7 +69,8 @@ def save_results(
     output_path: str | Path,
     model_id: str | None = None,
     prompt: str | None = None,
-    data_dir: str | Path | None = None
+    data_dir: str | Path | None = None,
+    adapter_path: str | None = None
 ) -> None:
     """Save evaluation metrics to a JSON file.
 
@@ -79,6 +80,7 @@ def save_results(
         model_id: Optional identifier of the model used.
         prompt: Optional prompt text used.
         data_dir: Optional identifier of the root data directory.
+        adapter_path: Optional path to LoRA adapter weights.
     """
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,6 +88,8 @@ def save_results(
     data: dict[str, Any] = {**metrics}
     if model_id is not None:
         data["model_id"] = model_id
+    if adapter_path is not None:
+        data["adapter_path"] = adapter_path
     if prompt is not None:
         data["prompt"] = prompt
 

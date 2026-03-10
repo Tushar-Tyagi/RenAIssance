@@ -48,6 +48,7 @@ The orchestrator supports several configuration overrides:
 
 - `--data-dir <path>`: Root directory containing `test/images/` and `test/transcription/`. (default: `data`)
 - `--model-id <name>`: The HuggingFace model space identifier (default: `Qwen/Qwen2-VL-7B-Instruct`).
+- `--adapter-path <path>`: Optional path to load fine-tuned LoRA adapter weights (e.g. `./checkpoints/ocr_vlm_lora`).
 - `--output-file <path>`: Path to save the evaluation metrics as a JSON file. If not provided, saves to `outputs/` with an auto-generated name based on model and timestamp.
 - `--prompt-file <path>`: Optional parameter to override the default prompt with a plain text file.
 
@@ -135,6 +136,19 @@ Currently available prompts:
 You can add more `.txt` files to the `prompts/` directory to further improve model robustness and generalization.
 
 This efficiently targets the `q_proj`, `v_proj`, `k_proj`, and `o_proj` attention matrices with 4-bit LoRA adapters while applying optimized mixed-precision `bfloat16` and Paged AdamW optimizers to maximize fine-tuning stability on standard consumer GPU hardware.
+
+### 3. Evaluating Fine-Tuned Models
+
+After fine-tuning, you can pass the saved adapter path to the `main.py` evaluation pipeline to test the newly adjusted weights:
+
+```bash
+python main.py \
+    --model-id "Qwen/Qwen2-VL-7B-Instruct" \
+    --adapter-path "./checkpoints/ocr_vlm_lora" \
+    --data-dir "data"
+```
+
+The resulting evaluation JSON will automatically reflect the adapter's use in both its filename and internal metadata.
 
 ## Normalization Pipeline
 

@@ -26,11 +26,12 @@ DEFAULT_PROMPT: str = (
 )
 
 
-def load_model(model_id: str = DEFAULT_MODEL_ID) -> BaseVLM:
+def load_model(model_id: str = DEFAULT_MODEL_ID, adapter_path: str | None = None) -> BaseVLM:
     """Load a Vision-Language Model wrapper appropriately sized for the model_id.
 
     Args:
         model_id: Hugging Face model identifier or local path.
+        adapter_path: Optional path to LoRA adapter weights.
 
     Returns:
         A VLM instance implementing :class:`BaseVLM`.
@@ -40,10 +41,10 @@ def load_model(model_id: str = DEFAULT_MODEL_ID) -> BaseVLM:
     # Simple dispatcher based on model_id heuristics
     if "qwen" in model_id_lower:
         from vlm_models.qwen import QwenVLM
-        return QwenVLM(model_id)
+        return QwenVLM(model_id, adapter_path=adapter_path)
 
 
-def transcribe_image(
+def transcribe_image(   
     model: BaseVLM,
     image_path: Path,
     prompt: str = DEFAULT_PROMPT,

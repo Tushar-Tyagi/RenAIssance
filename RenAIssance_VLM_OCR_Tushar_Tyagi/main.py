@@ -65,6 +65,12 @@ def parse_args() -> argparse.Namespace:
         help="Path to save the evaluation metrics as a JSON file. If not provided, saves to outputs/ with auto-generated name.",
     )
     parser.add_argument(
+        "--adapter-path",
+        type=str,
+        default=None,
+        help="Path to LoRA adapter weights to load.",
+    )
+    parser.add_argument(
         "--prompt-file",
         type=Path,
         default=None,
@@ -97,7 +103,11 @@ def main() -> None:
     if args.output_file is None:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         model_short = args.model_id.replace("/", "_").replace("-", "_")
-        args.output_file = Path(f"outputs/eval_{model_short}_{timestamp}.json")
+        if args.adapter_path:
+            adapter_name = Path(args.adapter_path).name
+            args.output_file = Path(f"outputs/eval_{model_short}_{adapter_name}_{timestamp}.json")
+        else:
+            args.output_file = Path(f"outputs/eval_{model_short}_{timestamp}.json")
 
     # Ensure output directory exists
     args.output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -113,7 +123,7 @@ def main() -> None:
     logger.info("Found %d test pair(s).", len(pairs))
 
     # 2. Model loading --------------------------------------------------
-    model = load_model(model_id=args.model_id)
+    model = load_model(model_id=args.model_id, adapter_path=args.adapter_path)
 
     # 3 & 4. Inference + normalisation ----------------------------------
     predictions_norm: list[str] = []
@@ -151,7 +161,8 @@ def main() -> None:
         args.output_file, 
         model_id=args.model_id, 
         prompt=prompt,
-        data_dir=args.data_dir
+        data_dir=args.data_dir,
+        adapter_path=args.adapter_path
     )
     logger.info("Saved evaluation metrics to '%s'.", args.output_file)
 
