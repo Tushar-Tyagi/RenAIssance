@@ -36,11 +36,12 @@ logger: logging.Logger = logging.getLogger(__name__)
 class QwenVLM(BaseVLM):
     """Wrapper for Qwen-VL family models (2.0, 2.5, 3.0+) with 4-bit quantisation."""
 
-    def __init__(self, model_id: str) -> None:
+    def __init__(self, model_id: str, adapter_path: str | None = None) -> None:
         """Initialize the Qwen VLM.
 
         Args:
             model_id: Hugging Face model identifier or local path.
+            adapter_path: Optional path to LoRA adapter weights.
         """
         logger.info("Loading Qwen model '%s' with 4-bit quantisation …", model_id)
 
@@ -79,6 +80,11 @@ class QwenVLM(BaseVLM):
             device_map="auto",
             torch_dtype=torch.float16,
         )
+
+        if adapter_path:
+            logger.info("Loading LoRA adapter from '%s' …", adapter_path)
+            from peft import PeftModel
+            self.model = PeftModel.from_pretrained(self.model, adapter_path)
 
         logger.info("Successfully loaded %s with %s architecture.", model_id, ModelClass.__name__)
 
