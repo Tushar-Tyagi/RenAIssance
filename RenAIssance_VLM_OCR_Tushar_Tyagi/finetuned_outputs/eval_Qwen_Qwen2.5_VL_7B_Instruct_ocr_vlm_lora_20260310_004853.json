@@ -1,0 +1,8 @@
+{
+    "cer": 0.1304410911201393,
+    "wer": 0.4209284028324154,
+    "model_id": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "adapter_path": "./checkpoints/ocr_vlm_lora",
+    "prompt": "Transcribe the handwritten text in this image exactly as written. Do not correct spelling, punctuation, or grammar. Preserve all original characters.",
+    "data_dir": "data_alltest"
+}

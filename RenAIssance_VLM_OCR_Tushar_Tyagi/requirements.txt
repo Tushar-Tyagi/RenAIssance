@@ -102,3 +102,6 @@ urllib3==2.6.3
 verovio==6.0.1
 wcwidth==0.6.0
 wheel==0.46.3
+peft>=0.18.1
+datasets>=4.7.0
+trl>=0.29.0

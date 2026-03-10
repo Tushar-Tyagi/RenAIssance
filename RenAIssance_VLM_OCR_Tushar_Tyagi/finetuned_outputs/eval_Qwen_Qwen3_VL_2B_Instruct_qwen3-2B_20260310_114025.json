@@ -1,0 +1,8 @@
+{
+    "cer": 0.4013348810214742,
+    "wer": 1.1510621557828482,
+    "model_id": "Qwen/Qwen3-VL-2B-Instruct",
+    "adapter_path": "./checkpoints/qwen3-2B",
+    "prompt": "Transcribe the handwritten text in this image exactly as written. Do not correct spelling, punctuation, or grammar. Preserve all original characters.",
+    "data_dir": "data_alltest"
+}
