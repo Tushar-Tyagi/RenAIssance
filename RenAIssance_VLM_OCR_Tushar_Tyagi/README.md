@@ -54,6 +54,16 @@ The orchestrator supports several configuration overrides:
 - `--use-llm-correction`: Flag to enable a post-processing step that corrects OCR spelling/formatting errors using a local 4-bit quantized text-generation LLM.
 - `--llm-model <name>`: HuggingFace model space identifier for the text-generation LLM corrector (default: `Qwen/Qwen2.5-7B-Instruct`).
 
+### Evaluation Outputs
+
+The pipeline automatically saves a JSON evaluation file to `outputs/`. In addition to the calculated **Character Error Rate (CER)** and **Word Error Rate (WER)**, the JSON contains a `results_details` array. 
+
+This array preserves the detailed predictions for each image, making it easy to run downstream future experiments without needing to do VLM inference again. Each entry includes:
+- `vlm_prediction_raw`: The initial, uncorrected text from the Vision-Language Model.
+- `llm_prediction_raw`: The post-processed text from the local LLM (if `--use-llm-correction` was enabled).
+- `ground_truth_raw` and `ground_truth_norm`: The original and normalized ground-truth text.
+- `final_prediction_raw` and `final_prediction_norm`: The text used for the final metric calculation.
+
 ### Supported Models
 
 It natively supports passing any Qwen2-VL, Qwen2.5-VL, or Qwen3-VL series string. Standard examples include:
