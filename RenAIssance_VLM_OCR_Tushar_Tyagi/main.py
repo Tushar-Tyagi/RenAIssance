@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import logging
+import json
 from pathlib import Path
 
 from data_loader import load_test_pairs
@@ -118,11 +119,20 @@ def main() -> None:
         if args.adapter_path:
             adapter_name = Path(args.adapter_path).name
             args.output_file = Path(f"outputs/eval_{model_short}_{adapter_name}_{timestamp}.json")
-        else:
-            args.output_file = Path(f"outputs/eval_{model_short}_{timestamp}.json")
-
-    # Ensure output directory exists
-    args.output_file.parent.mkdir(parents=True, exist_ok=True)
+    # Check if we should load a cache
+    cache: dict[str, dict[str, str]] = {}
+    if args.output_file.exists():
+        logger.info("Found existing output file '%s'. Loading cached predictions...", args.output_file)
+        try:
+            with open(args.output_file, "r", encoding="utf-8") as f:
+                cached_data = json.load(f)
+                if "results_details" in cached_data:
+                    for detail in cached_data["results_details"]:
+                        if "image_file" in detail:
+                            cache[detail["image_file"]] = detail
+            logger.info("Loaded %d cached predictions.", len(cache))
+        except Exception as e:
+            logger.warning("Failed to load existing output file for caching: %s", e)
 
     # 1. Data ingestion -------------------------------------------------
     logger.info("Loading test data from '%s' …", args.data_dir)
@@ -134,10 +144,7 @@ def main() -> None:
 
     logger.info("Found %d test pair(s).", len(pairs))
 
-    # 2. Model loading --------------------------------------------------
-    model = load_model(model_id=args.model_id, adapter_path=args.adapter_path)
-
-    # 3. VLM Inference --------------------------------------------------
+    # 2. VLM Inference --------------------------------------------------
     raw_predictions: list[str] = []
     
     prompt: str = DEFAULT_PROMPT
@@ -146,15 +153,33 @@ def main() -> None:
         with open(args.prompt_file, "r", encoding="utf-8") as f:
             prompt = f.read().strip()
 
-    for idx, (image_path, _) in enumerate(pairs, start=1):
-        logger.info(
-            "[%d/%d] Transcribing '%s' …", idx, len(pairs), image_path.name
-        )
+    # Only load VLM if we actually have images that need VLM processing
+    needs_vlm = any(
+        image_path.name not in cache or "vlm_prediction_raw" not in cache[image_path.name]
+        for image_path, _ in pairs
+    )
 
-        raw_prediction: str = transcribe_image(
-            model, image_path, prompt=prompt
-        )
-        logger.info("  Raw prediction (first 120 chars): %.120s", raw_prediction)
+    model = None
+    if needs_vlm:
+        model = load_model(model_id=args.model_id, adapter_path=args.adapter_path)
+
+    for idx, (image_path, _) in enumerate(pairs, start=1):
+        image_name = image_path.name
+        if image_name in cache and "vlm_prediction_raw" in cache[image_name]:
+            raw_prediction = cache[image_name]["vlm_prediction_raw"]
+            logger.info("[%d/%d] Skipping VLM for '%s' (found in cache).", idx, len(pairs), image_name)
+        else:
+            logger.info("[%d/%d] Transcribing '%s' …", idx, len(pairs), image_name)
+            raw_prediction: str = transcribe_image(
+                model, image_path, prompt=prompt
+            )
+            logger.info("  Raw prediction (first 120 chars): %.120s", raw_prediction)
+            
+            # Save back to cache dynamically to mark it as found for subsequent steps
+            if image_name not in cache:
+                cache[image_name] = {"image_file": image_name}
+            cache[image_name]["vlm_prediction_raw"] = raw_prediction
+            
         raw_predictions.append(raw_prediction)
 
     vlm_predictions = list(raw_predictions)
@@ -162,23 +187,48 @@ def main() -> None:
 
     # Free up VLM memory if we are going to load an LLM
     if args.use_llm_correction:
-        logger.info("Unloading VLM to free memory for LLM Corrector...")
-        import gc
-        import torch
-        del model
-        gc.collect()
-        torch.cuda.empty_cache()
+        if model is not None:
+            logger.info("Unloading VLM to free memory for LLM Corrector...")
+            import gc
+            import torch
+            del model
+            gc.collect()
+            torch.cuda.empty_cache()
 
-        corrector = LLMCorrector(model_id=args.llm_model)
+        # Only load the LLM if there are actual missing LLM predictions
+        needs_llm = any(
+            image_path.name not in cache or "llm_prediction_raw" not in cache[image_path.name]
+            for image_path, _ in pairs
+        )
+
+        if needs_llm:
+            corrector = LLMCorrector(model_id=args.llm_model)
+        else:
+            corrector = None
+
         for i in range(len(raw_predictions)):
-            logger.info("  [%d/%d] Correcting text with LLM...", i + 1, len(raw_predictions))
-            original_pred = raw_predictions[i]
-            corrected_pred = corrector.correct(original_pred)
-            logger.info("  Corrected prediction (first 120 chars): %.120s", corrected_pred)
+            image_name = pairs[i][0].name
+            if image_name in cache and "llm_prediction_raw" in cache[image_name]:
+                corrected_pred = cache[image_name]["llm_prediction_raw"]
+                logger.info("  [%d/%d] Skipping LLM for '%s' (found in cache).", i + 1, len(raw_predictions), image_name)
+            else:
+                logger.info("  [%d/%d] Correcting text with LLM for '%s'...", i + 1, len(raw_predictions), image_name)
+                original_pred = raw_predictions[i]
+                if corrector is not None:
+                    corrected_pred = corrector.correct(original_pred)
+                else: 
+                    # Fallback just in case, though logically unreachable due to needs_llm check
+                    corrected_pred = original_pred 
+                logger.info("  Corrected prediction (first 120 chars): %.120s", corrected_pred)
+                
+                if image_name not in cache:
+                    cache[image_name] = {"image_file": image_name}
+                cache[image_name]["llm_prediction_raw"] = corrected_pred
+
             llm_predictions.append(corrected_pred)
             raw_predictions[i] = corrected_pred
 
-    # 4. Normalisation --------------------------------------------------
+    # 3. Normalisation --------------------------------------------------
     predictions_norm: list[str] = []
     references_norm: list[str] = []
     results_details = []
@@ -201,10 +251,11 @@ def main() -> None:
         }
         if llm_predictions:
              detail["llm_prediction_raw"] = llm_predictions[i]
+             detail["llm_prediction_norm"] = pred_norm # the final_prediction is the LLM prediction when LLM is used
              
         results_details.append(detail)
 
-    # 5. Evaluation -----------------------------------------------------
+    # 4. Evaluation -----------------------------------------------------
     metrics: dict[str, float] = compute_metrics(predictions_norm, references_norm)
     print_results(metrics)
 

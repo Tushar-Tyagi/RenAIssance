@@ -64,6 +64,9 @@ This array preserves the detailed predictions for each image, making it easy to 
 - `ground_truth_raw` and `ground_truth_norm`: The original and normalized ground-truth text.
 - `final_prediction_raw` and `final_prediction_norm`: The text used for the final metric calculation.
 
+**Caching & Resumption**
+If an evaluation is interrupted, or if you want to add LLM-correction to an existing VLM evaluation without recalculating the VLM transcriptions, you can simply re-run `main.py` and point it to the *existing* JSON file using `--output-file`. The pipeline will automatically load the existing `vlm_prediction_raw` and `llm_prediction_raw` predictions from the file, skipping the expensive inference steps for those images and only completing what is missing.
+
 ### Supported Models
 
 It natively supports passing any Qwen2-VL, Qwen2.5-VL, or Qwen3-VL series string. Standard examples include:
