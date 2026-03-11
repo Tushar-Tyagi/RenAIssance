@@ -51,6 +51,8 @@ The orchestrator supports several configuration overrides:
 - `--adapter-path <path>`: Optional path to load fine-tuned LoRA adapter weights (e.g. `./checkpoints/ocr_vlm_lora`).
 - `--output-file <path>`: Path to save the evaluation metrics as a JSON file. If not provided, saves to `outputs/` with an auto-generated name based on model and timestamp.
 - `--prompt-file <path>`: Optional parameter to override the default prompt with a plain text file.
+- `--use-llm-correction`: Flag to enable a post-processing step that corrects OCR spelling/formatting errors using a local 4-bit quantized text-generation LLM.
+- `--llm-model <name>`: HuggingFace model space identifier for the text-generation LLM corrector (default: `Qwen/Qwen2.5-7B-Instruct`).
 
 ### Supported Models
 

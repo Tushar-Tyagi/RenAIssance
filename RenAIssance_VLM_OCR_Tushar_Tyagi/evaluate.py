@@ -70,7 +70,8 @@ def save_results(
     model_id: str | None = None,
     prompt: str | None = None,
     data_dir: str | Path | None = None,
-    adapter_path: str | None = None
+    adapter_path: str | None = None,
+    results_details: list[dict[str, Any]] | None = None
 ) -> None:
     """Save evaluation metrics to a JSON file.
 
@@ -85,7 +86,7 @@ def save_results(
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    data: dict[str, Any] = {**metrics}
+    data: dict[str, Any] = {k: v for k, v in metrics.items()}
     if model_id is not None:
         data["model_id"] = model_id
     if adapter_path is not None:
@@ -95,6 +96,9 @@ def save_results(
 
     if data_dir is not None:
         data["data_dir"] = str(data_dir)
+
+    if results_details is not None:
+        data["results_details"] = results_details
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)

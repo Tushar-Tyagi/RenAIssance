@@ -20,6 +20,7 @@ from data_loader import load_test_pairs
 from evaluate import compute_metrics, print_results, save_results
 from infer import DEFAULT_MODEL_ID, DEFAULT_PROMPT, load_model, transcribe_image
 from normalize import normalize
+from llm_corrector import LLMCorrector, DEFAULT_LLM_MODEL_ID
 
 # ---------------------------------------------------------------------------
 # Logging setup
@@ -76,6 +77,17 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional path to a text file containing the zero-shot prompt.",
     )
+    parser.add_argument(
+        "--use-llm-correction",
+        action="store_true",
+        help="Enable local LLM-based spelling correction of the VLM output.",
+    )
+    parser.add_argument(
+        "--llm-model",
+        type=str,
+        default=DEFAULT_LLM_MODEL_ID,
+        help=f"HuggingFace model ID for the local LLM corrector (default: {DEFAULT_LLM_MODEL_ID}).",
+    )
     return parser.parse_args()
 
 
@@ -125,17 +137,16 @@ def main() -> None:
     # 2. Model loading --------------------------------------------------
     model = load_model(model_id=args.model_id, adapter_path=args.adapter_path)
 
-    # 3 & 4. Inference + normalisation ----------------------------------
-    predictions_norm: list[str] = []
-    references_norm: list[str] = []
-
+    # 3. VLM Inference --------------------------------------------------
+    raw_predictions: list[str] = []
+    
     prompt: str = DEFAULT_PROMPT
     if args.prompt_file is not None:
         logger.info("Loading prompt from '%s' …", args.prompt_file)
         with open(args.prompt_file, "r", encoding="utf-8") as f:
             prompt = f.read().strip()
 
-    for idx, (image_path, ground_truth) in enumerate(pairs, start=1):
+    for idx, (image_path, _) in enumerate(pairs, start=1):
         logger.info(
             "[%d/%d] Transcribing '%s' …", idx, len(pairs), image_path.name
         )
@@ -144,13 +155,54 @@ def main() -> None:
             model, image_path, prompt=prompt
         )
         logger.info("  Raw prediction (first 120 chars): %.120s", raw_prediction)
+        raw_predictions.append(raw_prediction)
 
-        # Normalise both sides before comparison
-        pred_norm: str = normalize(raw_prediction)
+    vlm_predictions = list(raw_predictions)
+    llm_predictions = []
+
+    # Free up VLM memory if we are going to load an LLM
+    if args.use_llm_correction:
+        logger.info("Unloading VLM to free memory for LLM Corrector...")
+        import gc
+        import torch
+        del model
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        corrector = LLMCorrector(model_id=args.llm_model)
+        for i in range(len(raw_predictions)):
+            logger.info("  [%d/%d] Correcting text with LLM...", i + 1, len(raw_predictions))
+            original_pred = raw_predictions[i]
+            corrected_pred = corrector.correct(original_pred)
+            logger.info("  Corrected prediction (first 120 chars): %.120s", corrected_pred)
+            llm_predictions.append(corrected_pred)
+            raw_predictions[i] = corrected_pred
+
+    # 4. Normalisation --------------------------------------------------
+    predictions_norm: list[str] = []
+    references_norm: list[str] = []
+    results_details = []
+
+    for i, (image_path, ground_truth) in enumerate(pairs):
         gt_norm: str = normalize(ground_truth)
-
-        predictions_norm.append(pred_norm)
         references_norm.append(gt_norm)
+
+        pred = raw_predictions[i]
+        pred_norm = normalize(pred)
+        predictions_norm.append(pred_norm)
+
+        detail = {
+            "image_file": image_path.name,
+            "ground_truth_raw": ground_truth,
+            "ground_truth_norm": gt_norm,
+            "vlm_prediction_raw": vlm_predictions[i],
+            "final_prediction_raw": pred,
+            "final_prediction_norm": pred_norm,
+        }
+        if llm_predictions:
+             detail["llm_prediction_raw"] = llm_predictions[i]
+             
+        results_details.append(detail)
 
     # 5. Evaluation -----------------------------------------------------
     metrics: dict[str, float] = compute_metrics(predictions_norm, references_norm)
@@ -162,7 +214,8 @@ def main() -> None:
         model_id=args.model_id, 
         prompt=prompt,
         data_dir=args.data_dir,
-        adapter_path=args.adapter_path
+        adapter_path=args.adapter_path,
+        results_details=results_details
     )
     logger.info("Saved evaluation metrics to '%s'.", args.output_file)
 
